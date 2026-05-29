@@ -67,7 +67,7 @@ Tìm hiểu về Inference (Backend cho model AI) cụ thể là Triton và Sher
 ## 7. Việc làm tuần sau (sẽ update thêm)
 
 - Slide thuyết trình về Triton
-- Làm được luông end-to-end ASR
+- Làm được luồng end-to-end ASR
 
 ## 8. Câu hỏi cho mentor
 
