@@ -61,7 +61,7 @@ Tìm hiểu về Inference (Backend cho model AI) cụ thể là Triton và Sher
 
 | Vấn đề | Ảnh hưởng | Hỗ trợ cần thiết |
 | --- | --- | --- |
-| Chưa chạy thưc tế Triton trên GPU | Không có GPU, đang chạy thử bằng CPU | Nếu mentor có môi trường chạy GPU thì tốt |
+| Chưa chạy thực tế Triton trên GPU | Không có GPU, đang chạy thử bằng CPU | Nếu mentor có môi trường chạy GPU thì tốt |
 | Chưa stream được với model k8s của team | Chưa làm được 1 luồng end-to-end | Đang detect vấn đề tại sao mic on có log ghi chunk nhưng ghi thử file wav thì là 0s, không biết mentor có gợi ý gì không? |
 
 ## 7. Việc làm tuần sau (sẽ update thêm)
