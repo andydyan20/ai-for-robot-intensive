@@ -1,4 +1,4 @@
-# Hành trình học AI Engineering
+# AI Engineering
 
 ## Tóm tắt
 
