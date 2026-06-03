@@ -43,14 +43,15 @@ async def asr_worker():
             f"duration={end - start:.2f}s"
             if start is not None and end is not None
             else f"start={start:.2f}s"
-            f",samples={len(audio)}"
+            f",samples={len(audio)}.",
+            end=" "
         )
 
         text = await sherpa_offline_client.transcribe(audio)
         json_text = json.loads(text)
-        print(f"Text:{json_text.get('text', '')}", end="")
-        if end:
-            print("\n")
+        print(f"Text:{json_text.get('text', '')}", end="\n")
+        # if end:
+        #     print("\n")
 
         speech_queue.task_done()
 

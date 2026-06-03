@@ -1,0 +1,5 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+websockets==14.1
+numpy>=1.26,<3
+tritonclient[grpc]==2.53.0

@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple Stream ASR</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="workspace" aria-labelledby="title">
+        <header class="topbar">
+          <div>
+            <h1 id="title">Simple Stream ASR</h1>
+            <p id="status">Idle</p>
+          </div>
+          <button id="toggle" type="button">Start</button>
+        </header>
+
+        <section class="meter-panel" aria-label="Microphone level">
+          <div class="meter">
+            <span id="meter-bar"></span>
+          </div>
+        </section>
+
+        <section class="transcript" aria-labelledby="transcript-title">
+          <div class="section-head">
+            <h2 id="transcript-title">Transcript</h2>
+            <button id="clear" class="secondary" type="button">Clear</button>
+          </div>
+          <output id="transcript">No transcript yet.</output>
+        </section>
+
+        <section class="debug" aria-labelledby="debug-title">
+          <div class="section-head">
+            <h2 id="debug-title">Events</h2>
+            <button id="clear-log" class="secondary" type="button">Clear</button>
+          </div>
+          <pre id="log">No events yet.</pre>
+        </section>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
