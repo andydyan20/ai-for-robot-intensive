@@ -71,15 +71,15 @@ def main():
     sample_rate = 16000
     sample_per_read = int(0.032 * sample_rate)  # read XX second of audio
     buffer = np.empty(0, dtype=np.float32)
-    threshold = 0.4
-    silence_samples = int(0.25 * sample_rate)
+    threshold = 0.4 # VAD threshold probability
+    silence_samples = int(0.25 * sample_rate) # silence duration to consider end of speech
     count_silence = 0
     target_seconds = 46
     min_speech_seconds = 0.3
     pre_roll_seconds = 0.3
     pre_roll_buffer = np.empty(0, dtype=np.float32)
 
-    with sd.InputStream(channels=1, dtype="float32", samplerate=16000) as s:
+    with sd.InputStream(channels=1, dtype="float32", samplerate=sample_rate) as s:
         while True:
             current_time = time.time()
 
