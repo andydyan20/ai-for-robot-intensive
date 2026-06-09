@@ -130,7 +130,7 @@ class BrowserAsrSession:
         now = time.time()
 
         if self.speech_start_time is None:
-            self.speech_start_time = now - PRE_ROLL_SECONDS
+            self.speech_start_time = now - (len(self.pre_roll_buffer) / SAMPLE_RATE)
             self.buffer = np.concatenate([self.pre_roll_buffer, audio_float32])
             self.pre_roll_buffer = np.empty(0, dtype=np.float32)
             await self.websocket.send_json({"type": "speech_start", "probability": probability})
@@ -138,11 +138,11 @@ class BrowserAsrSession:
             self.buffer = np.concatenate([self.buffer, audio_float32])
 
         if len(self.buffer) >= SAMPLE_RATE * TARGET_SECONDS:
-            await self.decode_current_buffer(end=None)
+            await self.decode_current_buffer(end=now)
             pre_roll_samples = int(PRE_ROLL_SECONDS * SAMPLE_RATE)
             self.pre_roll_buffer = self.buffer[-pre_roll_samples:].copy()
             self.buffer = self.pre_roll_buffer.copy()
-            self.speech_start_time = now - PRE_ROLL_SECONDS
+            self.speech_start_time = now - (len(self.pre_roll_buffer) / SAMPLE_RATE)
 
     async def consume_silence(self, audio_float32: np.ndarray, probability: float) -> None:
         if self.speech_start_time is not None:

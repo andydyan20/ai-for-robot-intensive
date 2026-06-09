@@ -6,7 +6,6 @@ from pathlib import Path
 import json
 from vad_client import vad_client
 from sherpa_offline_client import sherpa_offline_client
-from pyrnnoise import RNNoise
 
 import queue
 import threading
@@ -24,6 +23,12 @@ class SpeechSegment:
 speech_queue = queue.Queue()
 speech_start_time = None
 
+SAMPLE_RATE = 16000
+TARGET_SECONDS = 46
+MIN_SPEECH_SECONDS = 0.3
+PRE_ROLL_SECONDS = 0.3
+SILENCE_SECONDS = 0.25
+
 def asr_worker_thread():
     asyncio.run(asr_worker())
 
@@ -33,27 +38,29 @@ async def asr_worker():
 
     while True:
         item = speech_queue.get()
+        try:
+            audio = item.get("audio")
+            start = item.get("start")
+            end = item.get("end")
 
-        audio = item.get("audio")
-        start = item.get("start")
-        end = item.get("end")
+            if audio is None or len(audio) == 0:
+                print("ASR skipped empty audio segment")
+                continue
 
-        print(
-            f"ASR "
-            f"duration={end - start:.2f}s"
-            if start is not None and end is not None
-            else f"start={start:.2f}s"
-            f",samples={len(audio)}.",
-            end=" "
-        )
+            duration = end - start if start is not None and end is not None else len(audio) / SAMPLE_RATE
+            print(f"ASR duration={duration:.2f}s,samples={len(audio)}.", end=" ")
 
-        text = await sherpa_offline_client.transcribe(audio)
-        json_text = json.loads(text)
-        print(f"Text:{json_text.get('text', '')}", end="\n")
-        # if end:
-        #     print("\n")
-
-        speech_queue.task_done()
+            text = await sherpa_offline_client.transcribe(audio, sample_rate=SAMPLE_RATE)
+            try:
+                json_text = json.loads(text)
+                transcript = json_text.get("text", "") if isinstance(json_text, dict) else str(json_text)
+            except json.JSONDecodeError:
+                transcript = "" if text == "<EMPTY>" else str(text)
+            print(f"Text:{transcript}", end="\n")
+        except Exception as exc:
+            print(f"ASR error: {exc}")
+        finally:
+            speech_queue.task_done()
 
 def main():
 
@@ -68,16 +75,15 @@ def main():
     default_input_device_idx = sd.default.device[0]
     print(f"Default input device: {devices[default_input_device_idx]['name']}")
 
-    sample_rate = 16000
+    sample_rate = SAMPLE_RATE
     sample_per_read = int(0.032 * sample_rate)  # read XX second of audio
     buffer = np.empty(0, dtype=np.float32)
     threshold = 0.4 # VAD threshold probability
-    silence_samples = int(0.25 * sample_rate) # silence duration to consider end of speech
+    silence_samples = int(SILENCE_SECONDS * sample_rate) # silence duration to consider end of speech
     count_silence = 0
-    target_seconds = 46
-    min_speech_seconds = 0.3
-    pre_roll_seconds = 0.3
     pre_roll_buffer = np.empty(0, dtype=np.float32)
+    pre_roll_samples = int(PRE_ROLL_SECONDS * sample_rate)
+    min_speech_samples = int(MIN_SPEECH_SECONDS * sample_rate)
 
     with sd.InputStream(channels=1, dtype="float32", samplerate=sample_rate) as s:
         while True:
@@ -100,36 +106,42 @@ def main():
                 continue
 
             if float(score[0]) > threshold:
+                count_silence = 0
                 if speech_start_time is None:
-                    speech_start_time = current_time - pre_roll_seconds
+                    speech_start_time = current_time - (len(pre_roll_buffer) / sample_rate)
                     buffer = np.concatenate([pre_roll_buffer, audio_float32])
                     pre_roll_buffer = np.empty(0, dtype=np.float32)
                     print("---Speech started---")
                 else:
                     buffer = np.concatenate([buffer, audio_float32])
                 
-                if len(buffer) >= sample_rate * target_seconds:
-                    print(f"Reached {target_seconds} seconds")
+                if len(buffer) >= sample_rate * TARGET_SECONDS:
+                    print(f"Reached {TARGET_SECONDS} seconds")
                     speech_queue.put({
                         "audio": buffer.copy(),
                         "start": speech_start_time,
+                        "end": current_time,
                     })
-                    pre_roll_buffer = buffer[-int(pre_roll_seconds * sample_rate):]
+                    pre_roll_buffer = buffer[-pre_roll_samples:].copy()
                     buffer = pre_roll_buffer.copy()
-                    speech_start_time = current_time - pre_roll_seconds
+                    speech_start_time = current_time - (len(pre_roll_buffer) / sample_rate)
 
                 # print(f"Signal: {signal}, Score: {score}")
                 # print("Voice detected")
                 
             else:
+                if speech_start_time is None:
+                    pre_roll_buffer = np.concatenate([pre_roll_buffer, audio_float32])
+                    if len(pre_roll_buffer) > pre_roll_samples:
+                        pre_roll_buffer = pre_roll_buffer[-pre_roll_samples:]
+                    continue
+
                 buffer = np.concatenate([buffer, audio_float32])
                 count_silence += len(audio_float32)
                 if count_silence < silence_samples:
                     continue
 
-                count_silence = 0
-
-                if len(buffer) >= sample_rate * min_speech_seconds:
+                if len(buffer) >= min_speech_samples:
                     # print(f"Silence detected, clearing buffer, Signal: {signal}, Score: {score}")
                     speech_queue.put({
                         "audio": buffer.copy(),
@@ -139,9 +151,9 @@ def main():
                 if len(buffer) > 0:
                     buffer = np.empty(0, dtype=np.float32)
                 speech_start_time = None
+                count_silence = 0
 
                 pre_roll_buffer = np.concatenate([pre_roll_buffer, audio_float32])
-                pre_roll_samples = int(pre_roll_seconds * sample_rate)
                 if len(pre_roll_buffer) > pre_roll_samples:
                     pre_roll_buffer = pre_roll_buffer[-pre_roll_samples:]
 
