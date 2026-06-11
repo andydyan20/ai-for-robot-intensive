@@ -48,9 +48,9 @@ async def asr_worker():
                 continue
 
             duration = end - start if start is not None and end is not None else len(audio) / SAMPLE_RATE
-            print(f"ASR duration={duration:.2f}s,samples={len(audio)}.")
+            print(f"ASR duration={duration:.2f}s,samples={len(audio)},bytes={audio.nbytes}.")
 
-            result = asr_triton_client.infer(audio, callid="1001", domain="macostest", endpoint=1)
+            result = asr_triton_client.infer(audio, callid="1001", domain="macostest", endpoint=0)
 
             if "error" in result:
                 print(f"Error: {result['error']}")
@@ -82,7 +82,6 @@ def main():
     threshold = 0.4 # VAD threshold probability
     silence_samples = int(SILENCE_SECONDS * sample_rate) # silence duration to consider end of speech
     count_silence = 0
-    pre_roll_samples = int(PRE_ROLL_SECONDS * sample_rate)
     min_speech_samples = int(MIN_SPEECH_SECONDS * sample_rate)
 
     with sd.InputStream(channels=1, dtype="float32", samplerate=sample_rate) as s:
