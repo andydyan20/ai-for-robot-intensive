@@ -122,6 +122,7 @@ def main():
                         "end": current_time,
                     })
                     speech_start_time = current_time
+                    buffer = np.empty(0, dtype=np.float32)
 
                 # print(f"Signal: {signal}, Score: {score}")
                 # print("Voice detected")
