@@ -1,4 +1,3 @@
-import json
 import time
 from pathlib import Path
 
@@ -7,7 +6,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from sherpa_offline_client import SherpaOfflineClient
+from asr_triton_client import AsrTritonClient
 from vad_client import VadClient
 
 
@@ -60,7 +59,7 @@ class BrowserAsrSession:
     def __init__(self, websocket: WebSocket) -> None:
         self.websocket = websocket
         self.vad_client = VadClient()
-        self.sherpa_client = SherpaOfflineClient()
+        self.asr_client = AsrTritonClient()
         self.buffer = np.empty(0, dtype=np.float32)
         self.pre_roll_buffer = np.empty(0, dtype=np.float32)
         self.speech_start_time: float | None = None
@@ -68,7 +67,6 @@ class BrowserAsrSession:
 
     async def run(self) -> None:
         try:
-            await self.sherpa_client.connect()
             await self.websocket.send_json(
                 {
                     "type": "started",
@@ -91,8 +89,6 @@ class BrowserAsrSession:
             pass
         except Exception as exc:
             await self.websocket.send_json({"type": "error", "message": str(exc)})
-        finally:
-            await self.sherpa_client.disconnect()
 
     async def process_audio(self, payload: bytes) -> None:
         if len(payload) % 4 != 0:
@@ -181,18 +177,17 @@ class BrowserAsrSession:
             }
         )
 
-        result_text = await self.sherpa_client.transcribe(audio, sample_rate=SAMPLE_RATE)
-        text = sherpa_text(result_text)
+        result = self.asr_client.infer(
+            audio,
+            callid="browser-session",
+            domain="macostest",
+            endpoint=1.0,
+            final=True,
+        )
+        if "error" in result:
+            await self.websocket.send_json({"type": "error", "message": result["error"]})
+            return
+
+        text = str(result.get("text", ""))
         if text:
             await self.websocket.send_json({"type": "text", "text": text})
-
-
-def sherpa_text(result: str | bytes) -> str:
-    result_text = result.decode("utf-8") if isinstance(result, bytes) else str(result)
-    try:
-        payload = json.loads(result_text)
-    except json.JSONDecodeError:
-        return result_text if result_text != "<EMPTY>" else ""
-    if isinstance(payload, dict) and isinstance(payload.get("text"), str):
-        return payload["text"]
-    return result_text
