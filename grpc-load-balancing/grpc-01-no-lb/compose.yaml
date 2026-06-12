@@ -1,0 +1,15 @@
+services:
+  grpc-echo-server-no-lb:
+    image: grpc-echo-server-no-lb:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+
+  grpc-echo-client-no-lb:
+    image: grpc-echo-client-no-lb:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      GRPC_TARGET: grpc-echo-server.grpc-no-lb.svc.cluster.local:50051
+      INTERVAL_SECONDS: "1"

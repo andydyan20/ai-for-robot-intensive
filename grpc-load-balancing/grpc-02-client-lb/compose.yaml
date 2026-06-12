@@ -1,0 +1,16 @@
+services:
+  grpc-echo-server:
+    image: grpc-echo-server-client-lb:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+
+  grpc-echo-client:
+    image: grpc-echo-client-client-lb:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      GRPC_TARGET: dns:///grpc-echo-server.grpc-client-lb.svc.cluster.local:50051
+      INTERVAL_SECONDS: "1"
+      CLIENT_LB: "true"

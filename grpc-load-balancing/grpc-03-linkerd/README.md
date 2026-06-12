@@ -10,7 +10,7 @@ It runs:
 - a default gRPC client channel with no `round_robin`
 - namespace `grpc-linkerd`
 
-With Linkerd injection enabled for the namespace, Linkerd can balance gRPC calls without putting `round_robin` in the client.
+With Linkerd installed and injection enabled for the namespace, Linkerd can balance gRPC calls without putting `round_robin` in the client. The runner labels the namespace with `linkerd.io/inject=enabled`.
 
 ## Run on Kind
 

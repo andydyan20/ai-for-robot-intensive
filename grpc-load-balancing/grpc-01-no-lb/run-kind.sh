@@ -2,8 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CLUSTER_NAME="${KIND_CLUSTER_NAME:-local}"
-NAMESPACE="${K8S_NAMESPACE:-grpc-linkerd}"
+CLUSTER_NAME="${KIND_CLUSTER_NAME:-grpc-local}"
+NAMESPACE="${K8S_NAMESPACE:-grpc-no-lb}"
 
 if docker compose version >/dev/null 2>&1; then
   COMPOSE=(docker compose)
@@ -13,6 +13,7 @@ else
   echo "docker compose is required but was not found"
   exit 1
 fi
+
 
 if ! kind get clusters | grep -qx "${CLUSTER_NAME}"; then
   echo "Creating Kind cluster: ${CLUSTER_NAME}"
@@ -25,7 +26,6 @@ kubectl config use-context "kind-${CLUSTER_NAME}"
 # Create namespace if it does not exist
 kubectl get namespace "${NAMESPACE}" >/dev/null 2>&1 || \
   kubectl create namespace "${NAMESPACE}"
-kubectl label namespace "${NAMESPACE}" linkerd.io/inject=enabled --overwrite
 
 # Set current context to use this namespace by default
 kubectl config set-context --current --namespace="${NAMESPACE}"
@@ -34,8 +34,8 @@ echo "Building Docker images"
 "${COMPOSE[@]}" -f "${ROOT_DIR}/compose.yaml" build
 
 echo "Loading images into Kind"
-kind load docker-image grpc-echo-server-linkerd:latest --name "${CLUSTER_NAME}"
-kind load docker-image grpc-echo-client-linkerd:latest --name "${CLUSTER_NAME}"
+kind load docker-image grpc-echo-server-no-lb:latest --name "${CLUSTER_NAME}"
+kind load docker-image grpc-echo-client-no-lb:latest --name "${CLUSTER_NAME}"
 
 echo "Deploying to Kubernetes"
 kubectl apply -n "${NAMESPACE}" -f "${ROOT_DIR}/k8s.yaml"
