@@ -1,0 +1,15 @@
+services:
+  grpc-echo-server-linked:
+    image: grpc-echo-server-linkerd:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+
+  grpc-echo-client-linked:
+    image: grpc-echo-client-linkerd:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      GRPC_TARGET: grpc-echo-server.grpc-linkerd.svc.cluster.local:50051
+      INTERVAL_SECONDS: "1"
